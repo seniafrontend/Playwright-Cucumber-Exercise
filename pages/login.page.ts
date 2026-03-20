@@ -5,6 +5,7 @@ import { expect } from "@playwright/test"
 export class Login {
     private readonly page: Page
     private readonly password: string = 'secret_sauce'
+    
     private readonly passwordField: string = 'input[id="password"]'
     private readonly userNameField: string = 'input[id="user-name"]'
     private readonly loginButton: string = 'input[id="login-button"]'
@@ -30,7 +31,7 @@ export class Login {
         ).toBe(normalizedExpected);
     }
 
-    public async validateErrorMessage(expectedMessage: string) {
+    public async assertErrorMessage(expectedMessage: string) {
         //get the error message in login form
         const actualMessage = (await this.page.locator('[data-test="error"]').textContent()) || '';
 
@@ -42,7 +43,7 @@ export class Login {
         ).toBe(normalizedExpected);
     }
 
-    public async loginAsUser(userName: string) {
+    public async login(userName: string) {
         await this.page.locator(this.userNameField).fill(userName)
         await this.page.locator(this.passwordField).fill(this.password)
         await this.page.locator(this.loginButton).click()

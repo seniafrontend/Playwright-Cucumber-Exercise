@@ -1,39 +1,29 @@
 import { Page, expect } from "@playwright/test";
 
 
+
 export class Product {
     private readonly page: Page;
 
     //product selectors
-    private readonly addToCart: string = 'button[id="add-to-cart-sauce-labs-backpack"]';
+    private readonly addBackpackBtn: string = 'button[id="add-to-cart-sauce-labs-backpack"]';
 
     //sorting selectors
-    private readonly sortSelect = '[data-test="product_sort_container"]';
+    private readonly sortSelect = '[data-test="product-sort-container"]';
     private readonly priceCells = '.inventory_item_price';
     private readonly sortSelectFallback = '#header_container select';
-
-
-    //checkout flow 
-    private readonly cartIcon = '.shopping_cart_link';
-    private readonly checkoutBtn = '#checkout';
-    private readonly firstName = '#first-name';
-    private readonly lastName = '#last-name';
-    private readonly postalCode = '#postal-code';
-    private readonly continueBtn = '#continue';
-    private readonly finishBtn = '#finish';
-    private readonly completeHeader = '.complete-header';
     
     constructor(page: Page) {
         this.page = page;
     }
 
     //product actions
-    public async addBackPackToCart() {
-        await this.page.locator(this.addToCart).click();
+    async addBackpack() {
+        await this.page.locator(this.addBackpackBtn).click();
     }
 
     //sorting actions
-    public async selectSort(sortText: string) {
+    public async applySort(sortText: string) {
     // Ensure we are on the inventory page after login
         await this.page.waitForURL(/\/inventory\.html$/);
 
@@ -44,7 +34,7 @@ export class Product {
         try {
         await select.selectOption({ label: sortText });
         } catch {
-    //fallback
+        //fallback logic
         const normalized = sortText.trim().toLowerCase();
         const value =
           normalized.includes('low to high') ? 'lohi' :
@@ -67,54 +57,27 @@ export class Product {
     }
 
 
-    private async getAllPrices(): Promise<number[]> {
+    private async getDisplayedPrices(): Promise<number[]> {
         await this.page.locator(this.priceCells).first().waitFor({ state: 'visible', timeout: 10000 });
         
         const texts = await this.page.locator(this.priceCells).allTextContents();
         return texts.map(t => parseFloat(t.replace('$', '').trim()));
     }
 
-    public async validatePricesSorted(order: 'asc' | 'desc') {
-        const prices = await this.getAllPrices();
-        if (prices.length !== 6) {
-            throw new Error(`Expected 6 items, found ${prices.length}. Prices: [${prices.join(', ')}]`);
+    public async assertPricesAreSorted(direction: 'asc' | 'desc') {
+        const displayedPrices  = await this.getDisplayedPrices();
+        if (displayedPrices .length !== 6) {
+            throw new Error(`Expected 6 products, got ${displayedPrices.length}. Prices: [${displayedPrices.join(', ')}]`);
         }
 
-        const expected = [...prices].sort((a, b) => a - b);
-        if (order === 'desc') expected.reverse();
+        const sorted = [...displayedPrices].sort((a, b) => a - b);
+        if (direction === 'desc') sorted.reverse();
 
-        expect(prices, `Prices not sorted ${order}. Actual: [${prices.join(', ')}]`)
-            .toEqual(expected);
+        expect(displayedPrices, `Prices not sorted ${direction}. Actual: [${displayedPrices.join(', ')}]`)
+            .toEqual(sorted);
     }
 
 
 
-    //purchase flow
-    public async openCart() {
-        await this.page.locator(this.cartIcon).click();
-    }
 
-    public async checkout() {
-        await this.page.locator(this.checkoutBtn).click();
-    }
-
-    public async fillCheckoutInfo(first: string, last: string, zip: string) {
-        await this.page.locator(this.firstName).fill(first);
-        await this.page.locator(this.lastName).fill(last);
-        await this.page.locator(this.postalCode).fill(zip);
-    }
-
-    public async continueCheckout() {
-        await this.page.locator(this.continueBtn).click();
-    }
-
-    public async finishCheckout() {
-        await this.page.locator(this.finishBtn).click();
-    }
-
-    public async validateConfirmationMessage(expected: string) {
-        const actual =
-          (await this.page.locator(this.completeHeader).textContent())?.trim() || "";
-        expect(actual).toBe(expected.trim());
-    }
 }
